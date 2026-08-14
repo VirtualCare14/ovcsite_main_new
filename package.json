@@ -6,9 +6,9 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "clean": "node -e \"try{fs.rmSync('.next',{recursive:true,force:true})}catch(e){}\"",
-    "dev": "npm run clean && node scripts/ensure-next-cache.js && next dev",
-    "build": "next build && node -e \"const fs=require('fs'); if(fs.existsSync('out')){ fs.cpSync('out', '.next', {recursive: true}); }\"",
+    "clean": "node -e \"try{fs.rmSync('.next',{recursive:true,force:true});fs.rmSync('out',{recursive:true,force:true})}catch(e){}\"",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
