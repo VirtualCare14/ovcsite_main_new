@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import emailjs from '@emailjs/browser';
 
 export default function ContactSection() {
   const [formData, setFormData] = useState({
@@ -10,10 +11,88 @@ export default function ContactSection() {
     helpMessage: ''
   });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setErrorMsg('');
+
+    if (!formData.emailAddress && !formData.mobileNumber) {
+      setErrorMsg('Please provide at least a valid email address or mobile number.');
+      return;
+    }
+
+    setLoading(true);
+
+    const serviceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
+    const templateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;
+    const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
+
+    try {
+      if (
+        !serviceId || serviceId.includes('your_service_id') ||
+        !templateId || templateId.includes('your_template_id') ||
+        !publicKey || publicKey.includes('your_public_key')
+      ) {
+        console.warn('EmailJS environment variables are not configured in .env.local yet.');
+        // Fallback simulation so user can test UI flow before pasting real keys
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        setSubmitted(true);
+        return;
+      }
+
+      await emailjs.send(
+        serviceId,
+        templateId,
+        {
+          // Name variations
+          name: formData.fullName,
+          fullName: formData.fullName,
+          full_name: formData.fullName,
+          from_name: formData.fullName,
+          user_name: formData.fullName,
+
+          // Email variations
+          email: formData.emailAddress,
+          emailAddress: formData.emailAddress,
+          email_address: formData.emailAddress,
+          reply_to: formData.emailAddress,
+          user_email: formData.emailAddress,
+          from_email: formData.emailAddress,
+
+          // Mobile / Phone variations
+          mobile: formData.mobileNumber ? `+91 ${formData.mobileNumber}` : '',
+          mobileNumber: formData.mobileNumber ? `+91 ${formData.mobileNumber}` : '',
+          mobile_number: formData.mobileNumber ? `+91 ${formData.mobileNumber}` : '',
+          phone: formData.mobileNumber ? `+91 ${formData.mobileNumber}` : '',
+          phone_number: formData.mobileNumber ? `+91 ${formData.mobileNumber}` : '',
+          user_mobile: formData.mobileNumber ? `+91 ${formData.mobileNumber}` : '',
+          contact_number: formData.mobileNumber ? `+91 ${formData.mobileNumber}` : '',
+
+          // Message variations
+          message: formData.helpMessage,
+          helpMessage: formData.helpMessage,
+          help_message: formData.helpMessage,
+          user_message: formData.helpMessage,
+
+          // Time / Timestamp
+          time: new Date().toLocaleString('en-US', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }),
+          date: new Date().toLocaleDateString(),
+        },
+        publicKey
+      );
+
+      setSubmitted(true);
+    } catch (error) {
+      console.error('EmailJS submission error:', error);
+      setErrorMsg(error?.text || error?.message || 'Failed to send message. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -117,13 +196,19 @@ export default function ContactSection() {
                       setSubmitted(false);
                       setFormData({ fullName: '', emailAddress: '', mobileNumber: '', helpMessage: '' });
                     }}
-                    className="bg-[#FF4500] hover:bg-[#E03D00] text-white text-sm font-bold py-2.5 px-6 rounded-xl transition-all"
+                    className="bg-[#FF4500] hover:bg-[#E03D00] text-white text-sm font-bold py-2.5 px-6 rounded-xl transition-all cursor-pointer"
                   >
                     Send Another Message
                   </button>
                 </div>
               ) : (
                 <form id="contactForm" onSubmit={handleSubmit}>
+                  {errorMsg && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-medium">
+                      {errorMsg}
+                    </div>
+                  )}
+
                   {/* Name */}
                   <div className="mb-4">
                     <label htmlFor="fullName" className="block text-sm font-bold text-slate-800 mb-1.5">
@@ -199,13 +284,26 @@ export default function ContactSection() {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full bg-[#FF4500] hover:bg-[#E03D00] text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-[#FF4500]/25 hover:shadow-[#FF4500]/40 transition-all flex items-center justify-center gap-2 text-base"
+                    disabled={loading}
+                    className="w-full bg-[#FF4500] hover:bg-[#E03D00] disabled:bg-slate-400 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-[#FF4500]/25 hover:shadow-[#FF4500]/40 transition-all flex items-center justify-center gap-2 text-base cursor-pointer disabled:cursor-not-allowed"
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
-                    <span>Send Message</span>
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="22" y1="2" x2="11" y2="13" />
+                          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                        <span>Send Message</span>
+                      </>
+                    )}
                   </button>
 
                   {/* Privacy Footer */}
@@ -222,3 +320,4 @@ export default function ContactSection() {
     </section>
   );
 }
+
