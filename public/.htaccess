@@ -1,0 +1,49 @@
+# Apache .htaccess configuration for Next.js on Hostinger Shared Hosting
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Serve existing static files and directories directly without rewriting
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Clean URLs: Serve path/index.html if available
+  RewriteCond %{DOCUMENT_ROOT}/$1/index.html -f
+  RewriteRule ^(.*)$ /$1/index.html [L]
+
+  # Serve path.html if available
+  RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+  RewriteRule ^(.*)$ /$1.html [L]
+
+  # Custom 404 Fallback
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /404.html [L]
+</IfModule>
+
+# Caching & Header Controls to prevent stale HTML referencing missing CSS hashes
+<IfModule mod_headers.c>
+  # 1. DO NOT CACHE HTML files (forces browser to fetch latest HTML pointing to valid CSS/JS hashes)
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
+  # 2. IMMUTABLE CACHE FOR HASHED STATIC ASSETS (_next/static/)
+  <FilesMatch "\.(css|js|woff|woff2|ttf|eot|png|jpg|jpeg|gif|webp|svg|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
+# Ensure proper MIME types for static assets
+<IfModule mod_mime.c>
+  AddType text/css .css
+  AddType application/javascript .js
+  AddType image/svg+xml .svg
+  AddType application/json .json
+</IfModule>
+
+# Prevent directory browsing
+Options -Indexes
